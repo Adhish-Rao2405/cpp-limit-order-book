@@ -1,0 +1,35 @@
+# CMake build trees
+/build/
+/out/
+/cmake-build-*/
+
+# Developer-local CMake presets
+/CMakeUserPresets.json
+
+# IDE and editor state
+/.idea/
+/.vs/
+/.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Generated benchmark and profiling output
+/results/generated/
+/benchmarks/generated/
+*.profdata
+*.profraw
+
+# Python cache and tooling state
+__pycache__/
+*.py[cod]
+/.pytest_cache/
+
+# Temporary and platform-generated files
+*.swp
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,19 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(include|src|tests|benchmarks)/.*'
+FormatStyle: file
+CheckOptions:
+  modernize-use-auto.MinTypeNameLength: '5'
+
+# The two excluded modernize checks are initially too policy-heavy for M0:
+# trailing return types are not a project convention, and nodiscard should be
+# applied from API semantics rather than inferred wholesale. This selection
+# will be reviewed against real code during later milestones.
+...
