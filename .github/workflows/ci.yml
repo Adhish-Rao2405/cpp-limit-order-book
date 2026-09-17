@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-msvc:
+    name: Windows MSVC / ${{ matrix.configuration }}
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+          - debug
+          - release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable MSVC x64 environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Toolchain identity
+        shell: pwsh
+        run: |
+          cl
+          cmake --version
+          ninja --version
+
+      - name: Configure
+        shell: pwsh
+        run: cmake --preset ${{ matrix.configuration }} --fresh
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset ${{ matrix.configuration }}
+
+      - name: Test
+        shell: pwsh
+        run: ctest --preset ${{ matrix.configuration }} --output-on-failure

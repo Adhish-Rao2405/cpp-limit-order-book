@@ -1,0 +1,43 @@
+# Default text detection.
+* text=auto
+
+# Project source and configuration are canonical LF.
+*.c               text eol=lf
+*.cc              text eol=lf
+*.cpp             text eol=lf
+*.cxx             text eol=lf
+*.h               text eol=lf
+*.hh              text eol=lf
+*.hpp             text eol=lf
+*.cmake            text eol=lf
+CMakeLists.txt     text eol=lf
+
+*.md              text eol=lf
+*.json            text eol=lf
+*.yml             text eol=lf
+*.yaml            text eol=lf
+*.py              text eol=lf
+*.ps1             text eol=lf
+
+.clang-format      text eol=lf
+.clang-tidy        text eol=lf
+.editorconfig      text eol=lf
+.gitignore         text eol=lf
+.gitattributes     text eol=lf
+
+# Windows command scripts retain native CRLF.
+*.bat              text eol=crlf
+*.cmd              text eol=crlf
+
+# Binary formats must never undergo text conversion.
+*.png              binary
+*.jpg              binary
+*.jpeg             binary
+*.gif              binary
+*.pdf              binary
+*.zip              binary
+*.exe              binary
+*.dll              binary
+*.lib              binary
+*.obj              binary
+*.pdb              binary
