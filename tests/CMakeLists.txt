@@ -1,6 +1,7 @@
 add_executable(
   lob_unit_tests
   unit/version_test.cpp
+  unit/domain_test.cpp
 )
 
 target_link_libraries(
