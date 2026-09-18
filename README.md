@@ -4,34 +4,58 @@
 
 ## Current status
 
-Milestone M1 establishes the reproducible build and test infrastructure that later matching-engine
-work will rely on.
+Milestone M3 implements and qualifies the deterministic single-writer matching core.
+
+The M3 implementation freeze is commit:
+
+~~~text
+41654e89229cf7742cd44a6c6e77b277d5a063b3
+~~~
 
 The repository currently provides:
 
 - a C++20 `lob_core` static library target;
-- target-scoped compiler warning policy with warnings treated as errors for first-party code;
+- strong domain types for price, quantity, order ID, sequence number and side;
+- validated `NewOrder`, `CancelOrder` and `ModifyOrder` command boundaries;
+- a deterministic single-writer `MatchingEngine`;
+- price-time priority with integer-tick prices and FIFO ordering within a price level;
+- maker-price execution and ordered `Trade` output;
+- active-order lookup with typed bid/ask locators;
+- cancellation and modification semantics, including priority-retaining reductions and
+  priority-losing replacements;
+- a fail-closed monotonic sequence allocator with explicit exhaustion and no wrap;
+- deterministic book snapshots and qualification-only invariant observability;
+- target-scoped compiler warnings with warnings treated as errors for first-party code;
 - Debug and Release CMake/Ninja presets;
-- GoogleTest integration using a cryptographically verified release archive;
-- CTest discovery and execution;
-- Windows/MSVC GitHub Actions configuration for Debug and Release qualification.
+- GoogleTest/CTest integration; and
+- Windows/MSVC GitHub Actions qualification.
 
-No order model, price-level representation, matching engine, trade path, replay implementation,
-benchmark harness, concurrency mechanism, or persistence layer exists yet.
+At the M3 implementation freeze, the test inventory is 74 tests. The exact implementation commit passed
+all 74 tests in both Debug and Release locally and in GitHub Actions run `35349811141`.
+
+A separate `BUILD_TESTING=OFF` Release build also passed during local M3 qualification, with the
+matching-engine qualification macro absent from the production compile commands.
 
 ## Evidence and non-claims
 
-This repository does not currently claim:
+The M3 evidence supports the implemented matching semantics and the tested deterministic state transitions
+for the qualified Windows/MSVC configurations.
 
-- high performance or low latency;
-- production-grade or exchange-grade suitability;
+The repository does **not** currently claim:
+
+- low latency or high throughput;
+- any benchmark or profiling result;
+- HFT, production-grade or exchange-grade suitability;
 - fidelity to the rules of any real exchange;
-- established matching correctness;
-- established benchmark or profiling evidence;
+- reference-model or differential-engine agreement;
+- a standalone replay/evidence harness;
+- persistence, recovery or networking;
+- concurrent matching or thread-safe engine access; or
 - cross-platform qualification beyond environments actually tested.
 
-Correctness, determinism, and performance statements will be introduced only when the relevant
-milestones produce reproducible evidence.
+Deterministic replay behaviour has been exercised by qualification tests, but a standalone replay/evidence
+harness is deliberately deferred to a later milestone. Performance claims remain prohibited until a
+reproducible benchmark baseline exists.
 
 ## Build and test
 
@@ -53,8 +77,8 @@ cmake --build --preset release
 ctest --preset release --output-on-failure
 ~~~
 
-The current local qualification environment uses x64 MSVC. GitHub CI is configured to exercise Windows
-MSVC Debug and Release configurations only.
+The current qualified environment uses x64 MSVC. GitHub CI exercises Windows/MSVC Debug and Release
+configurations.
 
 ## Dependency provenance
 
@@ -71,8 +95,12 @@ A dependency hash mismatch is a configuration failure and must not be bypassed.
 ## Design records
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Matching semantics](docs/MATCHING_SEMANTICS.md)
+- [Domain and matching invariants](docs/INVARIANTS.md)
 - [ADR 0001: Integer price ticks](docs/adr/0001-integer-price-ticks.md)
 - [ADR 0002: Single-writer deterministic core](docs/adr/0002-single-writer-deterministic-core.md)
+- [ADR 0003: Strong domain types and validation boundaries](docs/adr/0003-strong-domain-types-and-validation-boundaries.md)
+- [ADR 0004: Deterministic matching-core state architecture](docs/adr/0004-deterministic-matching-core-state-architecture.md)
 
 ## Licence
 

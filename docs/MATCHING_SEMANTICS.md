@@ -2,18 +2,26 @@
 
 ## Status
 
-Milestone: **M2 — Domain Model + Formal Matching Contract + Invariants**
+Specification origin: **M2 — Domain Model + Formal Matching Contract + Invariants**
 
-Subgate: **M2B — Formal Semantic Specification**
+Current implementation status: **M3 — Deterministic Single-Writer Matching Core qualified**
 
 This document defines the normative logical matching contract for the project.
 
-It does not claim that a matching engine, production order book, locator index,
-reference engine, benchmark harness, or production data structure is implemented.
+M3 implements this contract in `MatchingEngine` at implementation-freeze commit
+`41654e89229cf7742cd44a6c6e77b277d5a063b3`. The exact commit passed 74 tests in both Debug and Release
+locally and in GitHub Actions run `35349811141`.
 
-The governing rule is:
+The implementation includes the active order books, locator index, matching loops, sequence allocator,
+ordered trade output, modification/cancellation paths, deterministic snapshots and qualification-only
+invariant observability described by ADR 0004.
 
-> Specify correctness before implementing matching.
+This status does not claim a standalone replay/reference harness, benchmark harness, concurrency,
+persistence/recovery, networking, performance characteristics, production readiness or exchange fidelity.
+
+The governing rule remains:
+
+> Specify correctness before implementing matching; claim only what explicit evidence supports.
 
 ---
 
@@ -371,9 +379,7 @@ the trade.
 
 ## 10. Trade representation
 
-The exact C++ API is deferred to M2C.
-
-At the semantic level, a trade identifies at least:
+ADR 0004 freezes the public M3 trade representation as:
 
 ```text
 maker OrderId
@@ -382,14 +388,15 @@ execution Price
 execution Quantity
 ```
 
-Trades are emitted in exact matching order.
+Accepted commands return an `ExecutionReport` containing ordered `Trade` values. Trades are emitted in
+exact matching order.
 
-M2 does not define:
+The current contract does not define:
 
 - a `TradeId`;
 - timestamps;
 - venue codes;
-- fees;
+- fees; or
 - settlement metadata.
 
 ---
@@ -643,12 +650,12 @@ A priority-retaining quantity reduction does not require sequence allocation.
 
 ## 17. Expected domain rejection
 
-Expected domain failure is represented by explicit machine-testable result
-values.
+Expected domain failure is represented by explicit machine-testable result values.
 
-The concrete C++ result type is deferred to M2C.
+The current C++ result boundary is `DomainResult<T> = std::variant<T, DomainError>` as established by
+ADR 0003 and used by the M3 matching API.
 
-Logical rejection categories established in M2 include:
+Logical rejection categories are:
 
 ```text
 InvalidPrice
@@ -660,9 +667,10 @@ SequenceExhausted
 InvalidModification
 ```
 
-Free-form text must not be the primary error contract.
+Free-form text is not the primary error contract.
 
-Expected domain rejection must not require exception-based control flow.
+Expected domain rejection does not use exception-based control flow. Internal invariant violations or
+resource-allocation failures remain outside the expected-domain-error contract.
 
 ---
 
@@ -1222,40 +1230,51 @@ No state changes, no trade is emitted and no sequence is consumed.
 
 ---
 
-## 23. Deferred design decisions
+## 23. Design decisions resolved after M2B
 
-M2B does not determine:
+ADR 0003 and ADR 0004 subsequently resolved the following M2B-deferred decisions:
 
-- concrete header layout;
-- exact C++ result type;
-- hashing implementation;
-- formatting implementation;
-- storage containers;
-- price-level representation;
-- locator representation;
-- matching-loop implementation;
-- reference-engine implementation;
-- benchmark representation;
-- allocator strategy;
-- concurrency strategy.
+- public domain header layout;
+- the typed C++ result boundary;
+- matching-core public API;
+- side-book and price-level storage;
+- active-order locator representation;
+- deterministic matching-loop structure; and
+- internal sequence-allocation state and exhaustion behaviour.
 
-These decisions must not be inferred from this document.
+The following remain deliberately deferred:
+
+- a standalone reference/differential engine;
+- a standalone replay/evidence harness and durable evidence format;
+- benchmark workload and result formats;
+- custom memory-allocation or container optimisations;
+- concurrency;
+- persistence and recovery;
+- networking and exchange adapters; and
+- performance claims.
 
 ---
 
 ## 24. Claim boundary
 
-After M2B it is permissible to claim that the project has a documented formal
-matching contract.
+After M3 it is permissible to claim that the project has:
 
-It is not yet permissible to claim:
+- a documented normative matching contract;
+- an implemented deterministic single-writer matching core;
+- implemented price-time FIFO matching, cancellation and modification semantics;
+- fail-closed sequence exhaustion with no wrap;
+- deterministic snapshots and qualification-only invariant checking; and
+- explicit local and Windows/MSVC CI qualification for the M3 implementation freeze.
 
-- implemented matching correctness;
-- a working production order book;
-- runtime book invariant enforcement;
+The evidence does **not** establish:
+
+- universal proof over every possible command stream or corrupted state;
 - reference-engine agreement;
-- low latency;
-- high throughput;
+- a standalone replay/evidence system;
+- low latency or high throughput;
 - HFT capability;
+- concurrent matching;
+- persistence or recovery;
 - production readiness;
+- fidelity to a real exchange; or
 - exchange-grade behaviour.

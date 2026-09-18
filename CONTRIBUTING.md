@@ -8,16 +8,20 @@ milestone and must not introduce claims unsupported by generated evidence.
 - Use C++20 and preserve out-of-source builds.
 - Keep production ownership explicit; do not use raw owning pointers or naked `new`/`delete`.
 - Do not use floating-point values for price ordering.
+- Preserve the normative contract in `docs/MATCHING_SEMANTICS.md` and `docs/INVARIANTS.md`.
 - Keep normal domain rejection out of exception control flow.
-- Do not add concurrency or performance-oriented complexity before correctness qualification is
-  frozen and a benchmark baseline exists.
+- Preserve single-writer deterministic matching semantics unless a later architecture decision
+  explicitly changes that boundary.
+- Do not add concurrency or performance-oriented complexity before a benchmark baseline exists.
 - Pin external dependencies to reproducible identities and verify available integrity metadata.
 - Do not bypass dependency hash failures.
 - Keep `CMakeUserPresets.json` local and untracked.
 - Apply warning policy to first-party code without imposing project warnings on external
   dependencies.
+- Do not weaken qualification-only invariant or exhaustion coverage merely to simplify an
+  implementation change.
 
-## Local M1 qualification
+## Local qualification baseline
 
 Use an active compiler environment before configuring.
 
@@ -45,9 +49,13 @@ git status --short
 git status --ignored --short
 ~~~
 
-M1 provides automated tests but does not yet qualify static analysis, sanitizers, matching
-correctness, benchmarking, performance, or concurrency. Those capabilities belong to later
-milestones and must not be claimed early.
+At the M3 implementation freeze, the repository contains 74 CTest tests and the exact implementation
+commit passed all 74 in both Debug and Release locally and in GitHub Actions. M3 also qualified a
+separate `BUILD_TESTING=OFF` Release build.
+
+This does not qualify static analysis, sanitizers, a standalone replay harness, benchmarking,
+performance, concurrency, persistence, recovery, networking or exchange fidelity. Those capabilities
+require later bounded milestones and explicit evidence.
 
 ## Change discipline
 
@@ -58,3 +66,7 @@ risk. Keep unrelated repairs in separate changes.
 Do not weaken, remove, skip, or conditionally disable a failing qualification gate merely to obtain
 a passing result. Preserve the failure, identify its cause, and make any correction within an
 explicitly bounded scope.
+
+Historical ADRs are records of decisions at their acceptance point. Do not rewrite them merely to
+make later implementation status look current; use current-state documentation or a new ADR when a
+decision changes.

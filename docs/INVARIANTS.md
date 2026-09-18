@@ -2,25 +2,29 @@
 
 ## Status
 
-Milestone: **M2 — Domain Model + Formal Matching Contract + Invariants**
+Specification origin: **M2 — Domain Model + Formal Matching Contract + Invariants**
 
-Subgate: **M2B — Formal Semantic Specification**
+Current implementation status: **M3 — Deterministic Single-Writer Matching Core qualified**
 
-This document defines logical invariants that future implementations must preserve.
+This document remains the normative invariant contract. Historical `M2B status` and `Future enforcement`
+subsections are retained as specification provenance; they describe the state when M2B was authored and are
+not the current implementation-status summary.
 
-The existence of an invariant in this document does **not** mean runtime enforcement already exists.
+The M3 implementation freeze is commit
+`41654e89229cf7742cd44a6c6e77b277d5a063b3`. Its qualification suite contains 74 tests and passed in both
+Debug and Release locally and in GitHub Actions run `35349811141`.
 
-M2 distinguishes:
+M3 provides explicit implementation and qualification evidence for active-ID uniqueness, positive active
+state, structural side/price ownership, FIFO/sequence behaviour, locator consistency, maker-price execution,
+limit-boundary matching, rejection atomicity, sequence exhaustion/no-wrap behaviour, modification priority,
+quiescent uncrossed state and deterministic replay equivalence for the tested command stream.
 
-1. specification;
-2. domain-type enforcement;
-3. order-book enforcement;
-4. matching-engine enforcement;
-5. qualification evidence.
+The qualification suite is evidence for the covered state transitions; it is not a mathematical proof over
+all possible input streams. A standalone replay/reference evidence harness and exhaustive differential oracle
+remain future work.
 
-Claims must correspond to the strongest stage actually completed.
-
-The matching semantics in `docs/MATCHING_SEMANTICS.md` are normative and this document must remain consistent with them.
+The matching semantics in `docs/MATCHING_SEMANTICS.md` are normative and this document must remain
+consistent with them.
 
 ---
 
@@ -46,7 +50,7 @@ The property requires matching behaviour.
 
 The relevant implementation exists and explicit test/evidence qualification has passed.
 
-At M2B, all invariants below are **SPECIFIED**. Some scalar portions may later become domain-enforceable during M2 implementation.
+The per-invariant M2B status markers below are historical provenance. Current M3 implementation and qualification status is summarized in Section 18.
 
 ---
 
@@ -720,27 +724,24 @@ is the expected rejection for an ID that is not currently active.
 
 # 18. Enforcement matrix
 
-| Invariant | M2B | M2 domain types | Future book | Future matcher | Qualification required |
-| --- | --- | --- | --- | --- | --- |
-| I1 Active ID uniqueness | Specified | No | Yes | Indirect | Yes |
-| I2 Positive active quantity | Specified | Scalar portion | Yes | Yes | Yes |
-| I3 Valid resting price | Specified | Scalar portion | Yes | Yes | Yes |
-| I4 Side consistency | Specified | Partial / boundary validation | Yes | Yes | Yes |
-| I5 Price-level consistency | Specified | No | Yes | Indirect | Yes |
-| I6 FIFO/sequence consistency | Specified | Partial | Yes | Yes | Yes |
-| I7 Locator integrity | Specified | No | Yes | Indirect | Yes |
-| I8 Positive trade quantity | Specified | Partial | No | Yes | Yes |
-| I9 Matching price validity | Specified | No | No | Yes | Yes |
-| I10 Resting-price execution | Specified | No | No | Yes | Yes |
-| I11 Quantity conservation | Specified | No | Partial | Yes | Yes |
-| I12 Determinism | Specified | No | Partial | Yes | Yes |
-| I13 No executable cross | Specified | No | Partial | Yes | Yes |
+| Invariant | M2B specification | M3 implementation | M3 qualification evidence |
+| --- | --- | --- | --- |
+| I1 Active ID uniqueness | Specified | Active-ID index plus lifecycle checks | Duplicate-ID, fill/cancel reuse, cardinality and locator tests |
+| I2 Positive active quantity | Specified | Strong `Quantity` plus zero-residual removal | Lifecycle, partial-fill and invariant-checker tests |
+| I3 Valid resting price | Specified | Strong positive `Price` and structural price levels | Domain validation plus matching-state tests |
+| I4 Side consistency | Specified | Validated side plus side-book ownership | Buy/sell symmetry, modify-side immutability and invariant checks |
+| I5 Price-level consistency | Specified | Price is represented by the owning map level | Snapshot, remove/recreate-level and invariant checks |
+| I6 FIFO/sequence consistency | Specified | FIFO lists plus monotonic sequence allocation | FIFO, partial-fill retention, reductions, requeue and exhaustion tests |
+| I7 Locator integrity | Specified | Typed bid/ask locators in the active index | Locator consistency and active-cardinality invariant checks |
+| I8 Positive trade quantity | Specified | Positive `Quantity` construction and bounded matching subtraction | Partial/full-fill and maximum-quantity tests |
+| I9 Matching price validity | Specified | Matching loops enforce incoming limit boundaries | Buy/sell limit-boundary and multi-level sweep tests |
+| I10 Resting-price execution | Specified | Trade price is the maker/resting level price | Buy/sell and multi-level maker-price tests |
+| I11 Quantity conservation | Specified | Matching transitions subtract the same bounded trade quantity from participants | Scenario and extreme-quantity tests; no standalone exhaustive conservation oracle yet |
+| I12 Determinism | Specified | Single-writer canonical state and deterministic snapshot ordering | Repeated-engine replay-equivalence test; standalone replay harness not yet implemented |
+| I13 No executable cross | Specified | Matching drains executable prices to quiescence | Boundary tests plus invariant checker requiring `best_bid < best_ask` |
 
-“Scalar portion” means only that a strong scalar type may prevent invalid individual values.
-
-“Partial” means some supporting representation or state may exist without establishing the complete invariant.
-
-Neither term establishes runtime matching correctness.
+M3 qualification is bounded evidence for the implemented transition system. It does not convert this matrix
+into a universal proof over arbitrary corrupted state, resource-exception paths or all possible command streams.
 
 ---
 
@@ -748,15 +749,19 @@ Neither term establishes runtime matching correctness.
 
 An invariant may be preserved structurally without a dedicated runtime assertion.
 
-M2B does not require a future implementation to perform an expensive whole-book invariant scan after every command.
+M3 does not perform a whole-book invariant scan after every production command. The engine instead combines:
 
-Instead, later milestones must establish:
+1. strong scalar/domain validation;
+2. structural ownership in canonical bid/ask books;
+3. a typed active-ID locator index;
+4. deterministic matching transitions;
+5. a private `invariants_hold()` checker used by qualification tests through a build-gated friend seam; and
+6. targeted and adversarial tests, including allocator-exhaustion and deterministic-replay cases.
 
-1. which invariants are enforced by construction;
-2. which invariants are checked directly;
-3. which invariants are established through targeted tests;
-4. which invariants are established through reference/differential testing;
-5. which checks, if any, are debug-only or qualification-only.
+The canonical bid/ask books are invariant authority. Iteration over the unordered active-ID index is not
+semantic authority.
+
+Reference/differential testing and a standalone replay/evidence harness are not yet implemented.
 
 No performance-oriented omission is permitted to weaken correctness evidence silently.
 
@@ -764,21 +769,23 @@ No performance-oriented omission is permitted to weaken correctness evidence sil
 
 # 20. Non-claims
 
-The existence of this document does not establish:
+The M3 implementation and qualification evidence do not establish:
 
-- a working order book;
-- matching correctness;
-- runtime invariant checking;
-- reference-model agreement;
+- universal correctness for every possible or externally corrupted state;
+- strong recovery after arbitrary resource-allocation exceptions;
+- reference-model or differential-engine agreement;
+- a standalone replay/evidence harness;
 - exchange fidelity;
 - benchmark evidence;
 - latency characteristics;
 - throughput characteristics;
 - HFT capability;
-- production readiness;
+- thread-safe concurrent matching;
+- persistence, recovery or networking;
+- production readiness; or
 - exchange-grade suitability.
 
-These claims require later implementation and explicit qualification gates.
+Those properties require separate architecture decisions and explicit qualification evidence.
 
 ---
 
