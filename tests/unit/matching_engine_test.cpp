@@ -23,6 +23,33 @@ public:
         engine.next_sequence_ = next_sequence;
     }
 
+    [[nodiscard]] static bool reverse_price_level(
+        MatchingEngine& engine,
+        Side side,
+        Price price) {
+        if (side == Side::Buy) {
+            const auto level = engine.bids_.find(price);
+            if (level == engine.bids_.end()) {
+                return false;
+            }
+
+            level->second.reverse();
+            return true;
+        }
+
+        if (side == Side::Sell) {
+            const auto level = engine.asks_.find(price);
+            if (level == engine.asks_.end()) {
+                return false;
+            }
+
+            level->second.reverse();
+            return true;
+        }
+
+        return false;
+    }
+
     [[nodiscard]] static bool invariants_hold(
         const MatchingEngine& engine) {
         return engine.invariants_hold();
@@ -640,6 +667,103 @@ TEST(MatchingEngineTest, InvariantCheckerAcceptsEmptyAndMixedReachableStates) {
     const auto cancelled =
         engine.process(CancelOrder{OrderId{2}});
     ASSERT_TRUE(std::holds_alternative<ExecutionReport>(cancelled));
+    EXPECT_TRUE(MatchingEngineQualificationAccess::invariants_hold(engine));
+}
+
+TEST(
+    MatchingEngineTest,
+    InvariantCheckerRejectsDecreasingBidFifoSequenceOrder) {
+    MatchingEngine engine;
+
+    accept(engine, new_order(1, Side::Buy, 100, 3));
+    accept(engine, new_order(2, Side::Buy, 100, 5));
+
+    const auto before = engine.snapshot();
+    ASSERT_EQ(
+        before.bids,
+        (std::vector<RestingOrderView>{
+            {OrderId{1}, Side::Buy, price(100), quantity(3), sequence(1)},
+            {OrderId{2}, Side::Buy, price(100), quantity(5), sequence(2)}}));
+    ASSERT_TRUE(before.asks.empty());
+    ASSERT_EQ(before.next_sequence, SequenceNumber::from_value(3));
+    ASSERT_TRUE(MatchingEngineQualificationAccess::invariants_hold(engine));
+
+    ASSERT_TRUE(MatchingEngineQualificationAccess::reverse_price_level(
+        engine, Side::Buy, price(100)));
+
+    auto expected = before;
+    expected.bids = {before.bids[1], before.bids[0]};
+    const auto after = engine.snapshot();
+    ASSERT_EQ(after, expected);
+    ASSERT_EQ(after.bids[0].sequence, sequence(2));
+    ASSERT_EQ(after.bids[1].sequence, sequence(1));
+
+    EXPECT_FALSE(MatchingEngineQualificationAccess::invariants_hold(engine));
+}
+
+TEST(
+    MatchingEngineTest,
+    InvariantCheckerRejectsDecreasingAskFifoSequenceOrderWhenAllocatorExhausted) {
+    MatchingEngine engine;
+
+    accept(engine, new_order(1, Side::Sell, 101, 3));
+    accept(engine, new_order(2, Side::Sell, 101, 5));
+
+    const auto before = engine.snapshot();
+    ASSERT_TRUE(before.bids.empty());
+    ASSERT_EQ(
+        before.asks,
+        (std::vector<RestingOrderView>{
+            {OrderId{1}, Side::Sell, price(101), quantity(3), sequence(1)},
+            {OrderId{2}, Side::Sell, price(101), quantity(5), sequence(2)}}));
+    ASSERT_EQ(before.next_sequence, SequenceNumber::from_value(3));
+    ASSERT_TRUE(MatchingEngineQualificationAccess::invariants_hold(engine));
+
+    MatchingEngineQualificationAccess::set_next_sequence(engine, std::nullopt);
+    auto expected = before;
+    expected.next_sequence.reset();
+    ASSERT_EQ(engine.snapshot(), expected);
+    ASSERT_TRUE(MatchingEngineQualificationAccess::invariants_hold(engine));
+
+    ASSERT_TRUE(MatchingEngineQualificationAccess::reverse_price_level(
+        engine, Side::Sell, price(101)));
+
+    expected.asks = {before.asks[1], before.asks[0]};
+    const auto after = engine.snapshot();
+    ASSERT_EQ(after, expected);
+    ASSERT_EQ(after.asks[0].sequence, sequence(2));
+    ASSERT_EQ(after.asks[1].sequence, sequence(1));
+
+    EXPECT_FALSE(MatchingEngineQualificationAccess::invariants_hold(engine));
+}
+
+TEST(
+    MatchingEngineTest,
+    InvariantCheckerAcceptsStrictlyIncreasingNonContiguousFifoSequences) {
+    MatchingEngine engine;
+
+    MatchingEngineQualificationAccess::set_next_sequence(engine, sequence(2));
+    accept(engine, new_order(1, Side::Buy, 100, 3));
+    MatchingEngineQualificationAccess::set_next_sequence(engine, sequence(7));
+    accept(engine, new_order(2, Side::Buy, 100, 5));
+    MatchingEngineQualificationAccess::set_next_sequence(engine, sequence(20));
+    accept(engine, new_order(3, Side::Sell, 101, 4));
+    MatchingEngineQualificationAccess::set_next_sequence(engine, sequence(30));
+    accept(engine, new_order(4, Side::Sell, 101, 6));
+
+    const auto snapshot = engine.snapshot();
+    ASSERT_EQ(
+        snapshot.bids,
+        (std::vector<RestingOrderView>{
+            {OrderId{1}, Side::Buy, price(100), quantity(3), sequence(2)},
+            {OrderId{2}, Side::Buy, price(100), quantity(5), sequence(7)}}));
+    ASSERT_EQ(
+        snapshot.asks,
+        (std::vector<RestingOrderView>{
+            {OrderId{3}, Side::Sell, price(101), quantity(4), sequence(20)},
+            {OrderId{4}, Side::Sell, price(101), quantity(6), sequence(30)}}));
+    ASSERT_EQ(snapshot.next_sequence, SequenceNumber::from_value(31));
+
     EXPECT_TRUE(MatchingEngineQualificationAccess::invariants_hold(engine));
 }
 

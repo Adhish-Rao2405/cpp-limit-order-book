@@ -316,6 +316,8 @@ bool MatchingEngine::invariants_hold() const {
                 return false;
             }
 
+            std::optional<SequenceNumber> previous_sequence;
+
             for (auto order = level->second.cbegin();
                  order != level->second.cend();
                  ++order) {
@@ -332,6 +334,13 @@ bool MatchingEngine::invariants_hold() const {
                 if (!sequences.insert(order->sequence.value()).second) {
                     return false;
                 }
+
+                if (previous_sequence.has_value() &&
+                    !(*previous_sequence < order->sequence)) {
+                    return false;
+                }
+
+                previous_sequence = order->sequence;
 
                 if (next_sequence_.has_value() &&
                     !(order->sequence < *next_sequence_)) {
