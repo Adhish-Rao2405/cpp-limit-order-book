@@ -24,6 +24,7 @@ lob_set_project_warnings(lob_project_warnings)
 add_library(
   lob_core
   STATIC
+  src/matching_engine.cpp
   src/version.cpp
 )
 
@@ -53,6 +54,12 @@ set_target_properties(
 include(CTest)
 
 if(BUILD_TESTING)
+  target_compile_definitions(
+    lob_core
+    PUBLIC
+      LOB_ENABLE_MATCHING_ENGINE_QUALIFICATION=1
+  )
+
   include(cmake/Dependencies.cmake)
   add_subdirectory(tests)
 endif()
