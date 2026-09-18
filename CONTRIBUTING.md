@@ -49,9 +49,16 @@ git status --short
 git status --ignored --short
 ~~~
 
-At the M3 implementation freeze, the repository contains 74 CTest tests and the exact implementation
-commit passed all 74 in both Debug and Release locally and in GitHub Actions. M3 also qualified a
-separate `BUILD_TESTING=OFF` Release build.
+At the original M3 implementation freeze, the repository contained 74 CTest tests and the exact
+implementation commit passed all 74 in both Debug and Release locally and in GitHub Actions.
+
+The current M3-r1 qualified inventory contains 77 CTest tests. Corrective merged-main commit
+`afaf6f4466d47811593d66ddc96d5eb30921159d` passed all 77 in both Debug and Release in GitHub Actions run
+`35386634152`; local M3E.3 qualification also passed 77/77 in both configurations. M3-r1 also retains the
+separately qualified `BUILD_TESTING=OFF` Release production build boundary.
+
+The original and corrective M3 tags are immutable qualification provenance and must not be moved or rewritten
+merely to make later documentation appear current.
 
 This does not qualify static analysis, sanitizers, a standalone replay harness, benchmarking,
 performance, concurrency, persistence, recovery, networking or exchange fidelity. Those capabilities

@@ -4,13 +4,20 @@
 
 Specification origin: **M2 — Domain Model + Formal Matching Contract + Invariants**
 
-Current implementation status: **M3 — Deterministic Single-Writer Matching Core qualified**
+Current implementation status: **M3-r1 — Deterministic Single-Writer Matching Core qualified**
 
 This document defines the normative logical matching contract for the project.
 
-M3 implements this contract in `MatchingEngine` at implementation-freeze commit
+M3 initially implemented this contract in `MatchingEngine` at implementation-freeze commit
 `41654e89229cf7742cd44a6c6e77b277d5a063b3`. The exact commit passed 74 tests in both Debug and Release
 locally and in GitHub Actions run `35349811141`.
+
+A post-freeze F-01 finding concerned invariant-checker conformance to the already-frozen FIFO sequence-order
+requirement; it did not change the normative matching semantics in this document. Corrective commit
+`5e037546aed7abbe751fa2178b2dd426517d86e4` was merged to `main` at
+`afaf6f4466d47811593d66ddc96d5eb30921159d`. The current M3-r1 suite contains 77 tests, and post-merge
+GitHub Actions run `35386634152` passed Debug and Release. Annotated tag `m3-matching-core-qualified-r1`
+freezes the corrective qualified state while the original M3 tag remains historical provenance.
 
 The implementation includes the active order books, locator index, matching loops, sequence allocator,
 ordered trade output, modification/cancellation paths, deterministic snapshots and qualification-only

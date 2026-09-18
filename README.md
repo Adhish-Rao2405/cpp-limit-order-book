@@ -4,13 +4,30 @@
 
 ## Current status
 
-Milestone M3 implements and qualifies the deterministic single-writer matching core.
+Milestone M3-r1 is the current qualified state of the deterministic single-writer matching core.
 
-The M3 implementation freeze is commit:
+The original M3 implementation freeze was commit:
 
 ~~~text
 41654e89229cf7742cd44a6c6e77b277d5a063b3
 ~~~
+
+A post-freeze audit identified F-01: the qualification invariant checker did not detect non-increasing
+sequence order within a single price-level FIFO even though ADR 0004 requires that property. The corrective
+implementation is commit:
+
+~~~text
+5e037546aed7abbe751fa2178b2dd426517d86e4
+~~~
+
+It was merged to `main` at:
+
+~~~text
+afaf6f4466d47811593d66ddc96d5eb30921159d
+~~~
+
+The current qualified M3 state is frozen by annotated tag `m3-matching-core-qualified-r1`. The original
+`m3-matching-core-qualified` tag remains unchanged as historical qualification provenance.
 
 The repository currently provides:
 
@@ -30,11 +47,14 @@ The repository currently provides:
 - GoogleTest/CTest integration; and
 - Windows/MSVC GitHub Actions qualification.
 
-At the M3 implementation freeze, the test inventory is 74 tests. The exact implementation commit passed
-all 74 tests in both Debug and Release locally and in GitHub Actions run `35349811141`.
+At the original M3 implementation freeze, the test inventory was 74 tests. The exact implementation commit
+passed all 74 tests in both Debug and Release locally and in GitHub Actions run `35349811141`.
 
-A separate `BUILD_TESTING=OFF` Release build also passed during local M3 qualification, with the
-matching-engine qualification macro absent from the production compile commands.
+Following the F-01 correction, the current qualified suite contains 77 tests. Corrective merged-main commit
+`afaf6f4466d47811593d66ddc96d5eb30921159d` passed all 77 tests in both Debug and Release in GitHub Actions
+run `35386634152`; local M3E.3 qualification also passed 77/77 in both configurations. A separate
+`BUILD_TESTING=OFF` Release build passed with the matching-engine qualification macro absent from the
+production compile commands.
 
 ## Evidence and non-claims
 

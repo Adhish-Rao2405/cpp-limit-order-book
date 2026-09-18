@@ -4,15 +4,27 @@
 
 Specification origin: **M2 — Domain Model + Formal Matching Contract + Invariants**
 
-Current implementation status: **M3 — Deterministic Single-Writer Matching Core qualified**
+Current implementation status: **M3-r1 — Deterministic Single-Writer Matching Core qualified**
 
 This document remains the normative invariant contract. Historical `M2B status` and `Future enforcement`
 subsections are retained as specification provenance; they describe the state when M2B was authored and are
 not the current implementation-status summary.
 
-The M3 implementation freeze is commit
-`41654e89229cf7742cd44a6c6e77b277d5a063b3`. Its qualification suite contains 74 tests and passed in both
+The original M3 implementation freeze is commit
+`41654e89229cf7742cd44a6c6e77b277d5a063b3`. Its qualification suite contained 74 tests and passed in both
 Debug and Release locally and in GitHub Actions run `35349811141`.
+
+A post-freeze audit identified F-01: `MatchingEngine::invariants_hold()` did not detect non-increasing sequence
+order within one price-level FIFO as required by ADR 0004 section 24. The finding established an invariant-checker
+conformance defect; it did not establish a production matching-behaviour defect.
+
+Corrective commit `5e037546aed7abbe751fa2178b2dd426517d86e4` added the missing strict per-level sequence-order check and
+adversarial qualification coverage. It was merged to `main` at
+`afaf6f4466d47811593d66ddc96d5eb30921159d`, tree
+`172e396f46b007d8c3fe0442b74144f0c5db57f4`. The current suite contains 77 tests and post-merge GitHub
+Actions run `35386634152` passed Debug and Release. Annotated tag `m3-matching-core-qualified-r1` freezes this
+corrective qualified state; the original `m3-matching-core-qualified` tag remains unchanged as historical
+qualification provenance.
 
 M3 provides explicit implementation and qualification evidence for active-ID uniqueness, positive active
 state, structural side/price ownership, FIFO/sequence behaviour, locator consistency, maker-price execution,
