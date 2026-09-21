@@ -53,3 +53,44 @@ jobs:
       - name: Test
         shell: pwsh
         run: ctest --preset ${{ matrix.configuration }} --output-on-failure
+
+  reference-python:
+    name: Reference Python / CPython 3.12.10
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup CPython 3.12.10
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12.10'
+
+      - name: Python identity
+        shell: pwsh
+        run: |
+          python --version
+          python -c "import sys; print(sys.executable); print(sys.version); raise SystemExit(0 if sys.version_info[:3] == (3, 12, 10) else 1)"
+
+      - name: Reference test count
+        shell: pwsh
+        run: python -B -c "import sys,unittest; s=unittest.defaultTestLoader.discover('tools/reference_model/tests',top_level_dir='tools/reference_model'); n=s.countTestCases(); print('DISCOVERED_TEST_COUNT='+str(n)); sys.exit(0 if n==74 else 1)"
+
+      - name: Reference suite
+        shell: pwsh
+        run: python -B -m unittest discover -s tools/reference_model/tests -t tools/reference_model -v
+
+      - name: Reference suite under python -O
+        shell: pwsh
+        run: python -B -O -m unittest discover -s tools/reference_model/tests -t tools/reference_model -v
+
+      - name: Python cache hygiene
+        shell: pwsh
+        run: |
+          $Pycache=@(Get-ChildItem -LiteralPath . -Recurse -Force -Directory -Filter '__pycache__' -ErrorAction SilentlyContinue)
+          $Pyc=@(Get-ChildItem -LiteralPath . -Recurse -Force -File -Filter '*.pyc' -ErrorAction SilentlyContinue)
+          Write-Host "PYCACHE_COUNT=$($Pycache.Count)"
+          Write-Host "PYC_COUNT=$($Pyc.Count)"
+          if ($Pycache.Count -ne 0 -or $Pyc.Count -ne 0) { exit 1 }
