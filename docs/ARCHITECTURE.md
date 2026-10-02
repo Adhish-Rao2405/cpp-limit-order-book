@@ -5,13 +5,20 @@
 Milestone M3 implements and qualifies the deterministic single-writer matching core described by
 ADR 0004.
 
-M4 currently establishes the specification boundary for an independent reference model and a
-canonical trace/evidence contract through [ADR 0005](adr/0005-independent-reference-model-and-canonical-trace.md),
+M4 implements and qualifies the independent reference model and canonical trace/evidence
+contract defined through [ADR 0005](adr/0005-independent-reference-model-and-canonical-trace.md),
 [REFERENCE_MODEL.md](REFERENCE_MODEL.md) and [CANONICAL_TRACE.md](CANONICAL_TRACE.md).
-The executable reference model, canonical trace writer and validator are not yet implemented or
-qualified. The specifications do not establish a differential harness or standalone replay harness.
+The executable CPython reference model, canonical trace writer and validator are implemented and
+qualified within M4's bounded scope. M4 does not establish candidate/reference differential
+agreement or standalone replay/evidence closure.
 
-The logical boundaries distinguish implemented components from specified and future work:
+M5A preregisters the differential-qualification architecture and protocol through
+[ADR 0006](adr/0006-differential-qualification-architecture.md) and
+[M5_DIFFERENTIAL_QUALIFICATION.md](M5_DIFFERENTIAL_QUALIFICATION.md). No M5 candidate adapter,
+independent candidate canonical producer, differential comparator, sealed corpus, differential
+agreement or cross-platform M5 qualification is implemented or claimed at this checkpoint.
+
+The logical boundaries distinguish implemented, preregistered and future work:
 
 ```text
 M3 - implemented and qualified
@@ -24,20 +31,32 @@ Validated NewOrder / CancelOrder / ModifyOrder
      ordered ExecutionReport + deterministic EngineSnapshot
      (expected rejection is a typed DomainError)
 
-M4 - specified qualification boundary; not executable yet
+M4 - implemented and qualified
 Raw qualification commands
           |
           v
-Independent reference-model contract
+Independent CPython reference model
           |
           v
 Logical command observations
           |
           v
-Canonical-trace contract
+Canonical-trace v1 writer + validator
 
-Future milestones - not implemented or qualified here
-M5: candidate/reference differential qualification
+M5A - architecture and preregistration only; implementation not started
+Same frozen LOBQ1 bytes
+        /                    v               v
+C++ candidate      Python reference
+       \               /
+        v             v
+ independent canonical-v1 traces
+              |
+              v
+      exact-byte comparator
+      (designed, not implemented)
+
+Future work
+M5B-M5I: differential implementation and qualification
 M6: standalone replay/evidence
 M7: benchmark methodology and baseline evidence
 M8: profiling-backed optimization
@@ -62,14 +81,14 @@ candidate's behavior.
 | Component | Responsibility | Current state |
 | --- | --- | --- |
 | Event / Input | Supply commands without owning matching policy or sequence identity. | M3 callers provide validated typed commands; M4 specifies a separate raw qualification envelope, not a public matching protocol. |
-| Validation | Reject invalid scalar/command input and state-dependent command errors before unauthorized mutation. | M3 implements strong domain types, command factories and engine checks. M4 specifies independent reference validation; it is not yet implemented. |
+| Validation | Reject invalid scalar/command input and state-dependent command errors before unauthorized mutation. | M3 implements strong domain types, command factories and engine checks. M4 implements and qualifies independent reference validation within the reference-model scope. |
 | Matching Core | Apply the declared matching semantics as a deterministic single writer. | Implemented and qualified in M3. |
 | Order Book | Own active orders, price levels, FIFO priority and locator integrity. | Implemented internally by `MatchingEngine` using side books plus an active-ID index. |
 | Trade Output | Preserve ordered maker/taker executions. | Implemented as ordered `Trade` values in `ExecutionReport`. |
 | Snapshot / Observability | Expose canonical deterministic logical state for qualification and comparison. | Implemented as `EngineSnapshot`; invariant checking is private and used through a build-gated qualification seam. |
-| Independent Reference Model | Apply frozen semantics with independent validation and state representation. | M4 contract specified; executable implementation and qualification not yet established. |
-| Canonical Trace | Represent command observations as producer-neutral bytes and validate canonicality. | M4 contract specified; writer/validator implementation and qualification not yet established. |
-| Differential Qualification | Compare candidate and reference behavior and retain mismatch evidence. | Future M5; no differential harness or agreement established. |
+| Independent Reference Model | Apply frozen semantics with independent validation and state representation. | Implemented and qualified in M4 using CPython 3.12.10 and the standard library within the documented reference-model scope. |
+| Canonical Trace | Represent command observations as producer-neutral bytes and validate canonicality. | Canonical trace v1 writer and validator implemented and qualified in M4 within the documented canonical-trace scope. |
+| Differential Qualification | Compare candidate and reference behavior and retain mismatch evidence. | M5A architecture and preregistration established; candidate adapter, independent candidate serializer, comparator, corpus execution and differential agreement are not yet implemented or qualified. |
 | Replay / Evidence | Reproduce fixed command streams and package verifiable standalone evidence. | Future M6; no standalone harness or closure established. M3 tests cover deterministic replay equivalence only. |
 | Benchmark Harness | Run fixed workloads and record reproducible measurement metadata. | Future M7 methodology and baseline evidence; not implemented. |
 | Profiling / Optimization | Use profiling and measurement to justify changes while preserving correctness. | Future M8; no profiling-backed optimization evidence established. |
@@ -159,22 +178,24 @@ contract specifies the same seven-error vocabulary as comparison data: `InvalidP
 
 Malformed qualification input is not a matching `DomainError` result and does not produce a
 semantic command record. Serializer failures, programming defects and resource/runtime failures
-are also outside expected matching-domain rejection. These are reference/evidence contract
-requirements, not claims that executable M4 components already enforce them.
+are also outside expected matching-domain rejection. These boundaries are implemented and
+qualified for the M4 reference/canonical-trace scope; they do not establish M5 candidate/reference
+differential agreement.
 
 ## Milestone boundary
 
 | Milestone | Responsibility | Evidence at this checkpoint |
 | --- | --- | --- |
 | M3 | Deterministic matching implementation and qualification. | Established within the documented M3 scope. |
-| M4 | Independent reference model and canonical trace, including their implementation and qualification. | Contracts specified only; executable reference and writer/validator qualification are not yet established. |
-| M5 | Candidate/reference differential qualification and agreement. | Future work; no agreement claimed. |
+| M4 | Independent reference model and canonical trace, including their implementation and qualification. | Implemented and qualified within the documented M4 scope. |
+| M5 | Candidate/reference differential qualification and agreement. | M5A architecture/protocol preregistered only; implementation and differential agreement are not yet established. |
 | M6 | Standalone replay and durable evidence closure. | Future work; no closure claimed. |
 | M7 | Benchmark methodology and baseline evidence. | Future work; no benchmark results claimed. |
 | M8 | Profiling-backed optimization. | Future work; no optimization results claimed. |
 
-The current M4 specification checkpoint does not close M4 implementation qualification. No
-milestone inherits a stronger claim merely because a later component is planned.
+M4 implementation qualification is closed within its documented scope. M5A preregistration does
+not establish M5 implementation or candidate/reference agreement. No milestone inherits a stronger
+claim merely because a later component is designed or planned.
 
 ## Current constraints and claim boundary
 
@@ -189,8 +210,9 @@ milestone inherits a stronger claim merely because a later component is planned.
 - Resource-exception strong recovery is not claimed.
 - No latency, throughput, HFT, production-readiness or exchange-fidelity property is established by
   the current architecture.
-- Differential agreement, standalone replay/evidence closure, benchmark results and profiling-backed
-  optimization remain future evidence obligations.
+- M5 differential architecture and experimental protocol are preregistered, but differential
+  agreement, standalone replay/evidence closure, benchmark results and profiling-backed optimization
+  remain future evidence obligations.
 - No concurrent-matching, persistence/recovery or networking/exchange-adapter capability is claimed.
 - The specifications and bounded qualification evidence are not formal verification or universal
   correctness proof.
