@@ -133,3 +133,22 @@ gtest_discover_tests(
   lob_m5_candidate_canonical_trace_tests
   DISCOVERY_TIMEOUT 30
 )
+
+add_executable(
+  lob_m5_candidate_runner
+  ${PROJECT_SOURCE_DIR}/tools/differential/candidate_runner.cpp
+)
+
+target_link_libraries(
+  lob_m5_candidate_runner
+  PRIVATE
+    lob_candidate_adapter
+    lob_candidate_canonical_trace
+    lob_project_warnings
+)
+
+set_target_properties(
+  lob_m5_candidate_runner
+  PROPERTIES
+    CXX_EXTENSIONS OFF
+)
