@@ -41,3 +41,6 @@ CMakeLists.txt     text eol=lf
 *.lib              binary
 *.obj              binary
 *.pdb              binary
+
+# Qualification corpus bytes are evidence; never text-normalize.
+tools/differential/corpus/**/*.lobq1 -text
