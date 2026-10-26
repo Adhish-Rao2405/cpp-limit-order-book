@@ -1,127 +1,118 @@
-# cpp-limit-order-book
+# Deterministic C++20 Limit Order Book
 
-`cpp-limit-order-book` is a greenfield C++20 limit-order-book and matching-engine engineering project.
+[![CI](https://github.com/Adhish-Rao2405/cpp-limit-order-book/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Adhish-Rao2405/cpp-limit-order-book/actions/workflows/ci.yml)
 
-## Current status
+A correctness-first trading-systems engineering project: a **C++20 limit order book and matching engine**, an **independently implemented Python reference model**, and a growing **differential-testing and reproducibility framework**.
 
-Milestone M3-r1 is the current qualified state of the deterministic single-writer matching core.
+This is a systems-engineering project rather than a trading application or an exchange simulator. The emphasis is on deterministic behaviour, explicit ownership, precise matching rules, independent testing, and measurable evidence before performance optimisation.
 
-The original M3 implementation freeze was commit:
+> **Public repository status — 26 October 2026:** The matching core (M3) and independent reference/trace tooling (M4) are qualified. M5 candidate, comparison, corpus-sealing and deterministic-generator components have been merged to `main`; the complete 176-stream differential experiment has **not** been completed. The latest verified public `main` commit is [`a02e438`](https://github.com/Adhish-Rao2405/cpp-limit-order-book/commit/a02e43801f300b0503a855bfa0c9eb2e1f083cb5). The generated corpus and final seal have been qualified in a separate local workflow, but their GitHub publication is not established by the public `main` state.
 
-~~~text
-41654e89229cf7742cd44a6c6e77b277d5a063b3
-~~~
+## What this project demonstrates
 
-A post-freeze audit identified F-01: the qualification invariant checker did not detect non-increasing
-sequence order within a single price-level FIFO even though ADR 0004 requires that property. The corrective
-implementation is commit:
+| Engineering area | Implemented work |
+| --- | --- |
+| **C++ and data structures** | Single-writer matching engine using ordered price levels, per-level FIFO queues, and an active-order hash index with typed locators. |
+| **Matching correctness** | Price-time priority, maker-price trades, partial/multi-level fills, cancellations, modifications, deterministic snapshots, and explicit sequence exhaustion. |
+| **API and state design** | Strong types for prices, quantities, IDs and sequences; typed domain errors; no raw owning pointers or floating-point price comparisons. |
+| **Independent verification** | CPython reference model with a different state representation and matching algorithm, plus independent canonical-trace producers. |
+| **Adversarial qualification** | Strict qualification transport, exact-byte comparison, malformed-input rejection, fixed/boundary workloads, and tamper-aware corpus-sealing tools. |
+| **Engineering workflow** | CMake/Ninja, GoogleTest/CTest, warnings-as-errors, Debug/Release builds, Windows CI, documented design decisions and Git provenance. |
 
-~~~text
-5e037546aed7abbe751fa2178b2dd426517d86e4
-~~~
+### Matching behaviour in one example
 
-It was merged to `main` at:
+The book receives a resting **sell for 5 units at 101 ticks**. A new **buy for 3 units at 103 ticks** crosses the spread:
 
-~~~text
-afaf6f4466d47811593d66ddc96d5eb30921159d
-~~~
+1. The engine executes **3 units at 101** — the resting maker's price, not the incoming order's limit.
+2. The resting sell remains active with **2 units**.
+3. Subsequent eligible orders respect its original priority at that price level.
 
-The current qualified M3 state is frozen by annotated tag `m3-matching-core-qualified-r1`. The original
-`m3-matching-core-qualified` tag remains unchanged as historical qualification provenance.
+The implementation also handles multi-level sweeps, cancellation, quantity reductions that retain priority, and replacements that lose priority according to the [frozen matching rules](docs/MATCHING_SEMANTICS.md).
 
-The repository currently provides:
+## Architecture
 
-- a C++20 `lob_core` static library target;
-- strong domain types for price, quantity, order ID, sequence number and side;
-- validated `NewOrder`, `CancelOrder` and `ModifyOrder` command boundaries;
-- a deterministic single-writer `MatchingEngine`;
-- price-time priority with integer-tick prices and FIFO ordering within a price level;
-- maker-price execution and ordered `Trade` output;
-- active-order lookup with typed bid/ask locators;
-- cancellation and modification semantics, including priority-retaining reductions and
-  priority-losing replacements;
-- a fail-closed monotonic sequence allocator with explicit exhaustion and no wrap;
-- deterministic book snapshots and qualification-only invariant observability;
-- target-scoped compiler warnings with warnings treated as errors for first-party code;
-- Debug and Release CMake/Ninja presets;
-- GoogleTest/CTest integration; and
-- Windows/MSVC GitHub Actions qualification.
+The C++ matching engine owns the book. Its qualification path is deliberately separated from the independent reference model:
 
-At the original M3 implementation freeze, the test inventory was 74 tests. The exact implementation commit
-passed all 74 tests in both Debug and Release locally and in GitHub Actions run `35349811141`.
+```mermaid
+flowchart TD
+    Input["Frozen LOBQ1 qualification stream"]
+    Input --> Candidate["C++ candidate adapter and runner"]
+    Input --> Reference["Independent Python reference runner"]
+    Candidate --> Core["C++20 MatchingEngine"]
+    Core --> CTrace["C++ canonical trace"]
+    Reference --> PModel["Python reference model"]
+    PModel --> PTrace["Python canonical trace"]
+    CTrace --> Compare["Independent exact-byte comparator"]
+    PTrace --> Compare
+```
 
-Following the F-01 correction, the current qualified suite contains 77 tests. Corrective merged-main commit
-`afaf6f4466d47811593d66ddc96d5eb30921159d` passed all 77 tests in both Debug and Release in GitHub Actions
-run `35386634152`; local M3E.3 qualification also passed 77/77 in both configurations. A separate
-`BUILD_TESTING=OFF` Release build passed with the matching-engine qualification macro absent from the
-production compile commands.
+The main implementation uses `std::map<Price, std::list<RestingOrder>>` for each side of the book and `std::unordered_map<OrderId, Locator>` for active-order lookup. The reference deliberately uses a flat collection and fresh semantic searches: reproducing the C++ data structures in Python would undermine the independence of the test oracle.
 
-## Evidence and non-claims
+**Important distinction:** the adapter, runners, serializers, comparator and generators exist; their existence does **not** establish agreement across the complete sealed M5 workload. That remains the purpose of the pending M5G–M5I qualification stages.
 
-The M3 evidence supports the implemented matching semantics and the tested deterministic state transitions
-for the qualified Windows/MSVC configurations.
+## Progress and evidence
 
-The repository does **not** currently claim:
+| Milestone | Status on public `main` | Evidence or boundary |
+| --- | --- | --- |
+| **M3 — Matching core** | Qualified | 77/77 corrected M3 tests in Debug and Release; [M3 corrective history](https://github.com/Adhish-Rao2405/cpp-limit-order-book/commit/afaf6f4466d47811593d66ddc96d5eb30921159d). |
+| **M4 — Independent reference** | Qualified | CPython 3.12.10 reference model and canonical-v1 writer/validator; [M4 PR](https://github.com/Adhish-Rao2405/cpp-limit-order-book/pull/3). |
+| **M5A–D — Differential tooling** | Merged and component-qualified | Preregistered protocol, candidate adapter, independent C++ trace producer, comparator and harness. M5D local qualification reported 118/118 CTest cases in both configurations and 31/31 harness tests; [M5D PR](https://github.com/Adhish-Rao2405/cpp-limit-order-book/pull/8). |
+| **M5E — Corpus integrity** | Fixed corpus and sealing machinery merged | 32 fixed, 24 boundary and 24 malformed transport streams (80 committed files); [M5E PR](https://github.com/Adhish-Rao2405/cpp-limit-order-book/pull/9). |
+| **M5F.2 — Generated workload source** | Merged | Deterministic G1–G4 generator for 96 intended streams and 33,792 semantic positions; [M5F.2 PR](https://github.com/Adhish-Rao2405/cpp-limit-order-book/pull/10). |
+| **M5F.3 — Generated corpus and final seal** | **Not on public `main` at this checkpoint** | Local materialisation and seal verification reported; commit/publication outcome requires separate verification. |
+| **M5G–I — Full differential experiment, platform matrix and M5 closure** | Pending | No complete sealed-corpus candidate/reference agreement claimed. |
 
-- low latency or high throughput;
-- any benchmark or profiling result;
-- HFT, production-grade or exchange-grade suitability;
-- fidelity to the rules of any real exchange;
-- reference-model or differential-engine agreement;
-- a standalone replay/evidence harness;
-- persistence, recovery or networking;
-- concurrent matching or thread-safe engine access; or
-- cross-platform qualification beyond environments actually tested.
+The latest verified [`main` CI run](https://github.com/Adhish-Rao2405/cpp-limit-order-book/actions/runs/38728445086) passed Windows/MSVC Debug, Windows/MSVC Release and the CPython reference-model jobs. The reference CI workflow discovers **74 tests** and executes them in normal and `-O` modes. These are bounded test results, not proof of universal correctness.
 
-Deterministic replay behaviour has been exercised by qualification tests, but a standalone replay/evidence
-harness is deliberately deferred to a later milestone. Performance claims remain prohibited until a
-reproducible benchmark baseline exists.
+### Key design decisions
+
+- **Deterministic single writer:** no hidden concurrency or thread-safety claims; matching state has one mutation authority.
+- **Integer price ticks:** avoids floating-point ordering ambiguity in the matching core.
+- **Explicit ownership and locators:** the engine owns price levels and FIFO nodes; active-order lookup does not determine execution priority.
+- **Failure as data:** expected domain rejections use typed `DomainError` results; malformed transport is handled separately.
+- **No silent oracle repair:** canonical serializers preserve observations rather than sorting, normalising or fixing incorrect matching output.
+- **Fail-closed experiments:** a mismatch or violated qualification prerequisite stops the active gate; the original failure remains evidence.
 
 ## Build and test
 
-The checked-in presets require CMake 3.25 or newer and use out-of-source Ninja builds.
+Requirements: a C++20 compiler, **CMake 3.25+**, **Ninja**, and the GoogleTest dependency fetched and hash-verified by the configured build. The checked-in presets create out-of-source Debug and Release builds.
 
-Debug:
-
-~~~powershell
+```bash
+# Debug
 cmake --preset debug --fresh
 cmake --build --preset debug
 ctest --preset debug --output-on-failure
-~~~
 
-Release:
-
-~~~powershell
+# Release
 cmake --preset release --fresh
 cmake --build --preset release
 ctest --preset release --output-on-failure
-~~~
+```
 
-The current qualified environment uses x64 MSVC. GitHub CI exercises Windows/MSVC Debug and Release
-configurations.
+Windows/MSVC is covered by GitHub Actions. Linux Debug/Release component testing is documented in milestone qualification evidence; **Linux CI and the full cross-platform M5 matrix are not yet claimed**. This repository currently provides a reusable `lob_core` library and qualification runners, not a production trading gateway.
 
-## Dependency provenance
+## Explore the code
 
-GoogleTest is fetched only when testing is enabled.
+| Start here | What to inspect |
+| --- | --- |
+| [`include/lob/matching_engine.hpp`](include/lob/matching_engine.hpp) and [`src/matching_engine.cpp`](src/matching_engine.cpp) | Public engine API, order-book ownership, trade execution and state transitions. |
+| [`include/lob/domain/`](include/lob/domain/) | Strong domain types and validated commands. |
+| [`tests/unit/`](tests/unit/) | Matching rules, edge cases and state invariants. |
+| [`tools/reference_model/`](tools/reference_model/) | Independent Python oracle and canonical trace logic. |
+| [`tools/differential/`](tools/differential/) | Candidate/reference runners, exact-byte comparator, generator and corpus-integrity tooling. |
+| [`docs/MATCHING_SEMANTICS.md`](docs/MATCHING_SEMANTICS.md) and [`docs/INVARIANTS.md`](docs/INVARIANTS.md) | Normative matching behaviour. |
+| [`docs/adr/`](docs/adr/) | Recorded architecture decisions and rejected alternatives. |
+| [`docs/M5_DIFFERENTIAL_QUALIFICATION.md`](docs/M5_DIFFERENTIAL_QUALIFICATION.md) | Preregistered M5 test contract (a frozen design document, not a live progress tracker). |
 
-M1 pins GoogleTest v1.18.0 by release archive and verifies:
+## Roadmap
 
-~~~text
-SHA256=6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5
-~~~
+1. **M5 — Correctness evidence:** publish the sealed corpus; run full candidate/reference differential and metamorphic qualification; complete the cross-platform matrix and final closure.
+2. **M6 — Reproducible replay:** build standalone replay and evidence packaging, with verifiable provenance and repeatable results.
+3. **M7 — Measurement:** create a controlled benchmark baseline, report throughput and latency distributions, and establish variance and measurement limitations.
+4. **M8 — Optimisation:** profile actual bottlenecks, make targeted C++ changes, and demonstrate both correctness preservation and reproducible performance improvement.
 
-A dependency hash mismatch is a configuration failure and must not be bypassed.
-
-## Design records
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Matching semantics](docs/MATCHING_SEMANTICS.md)
-- [Domain and matching invariants](docs/INVARIANTS.md)
-- [ADR 0001: Integer price ticks](docs/adr/0001-integer-price-ticks.md)
-- [ADR 0002: Single-writer deterministic core](docs/adr/0002-single-writer-deterministic-core.md)
-- [ADR 0003: Strong domain types and validation boundaries](docs/adr/0003-strong-domain-types-and-validation-boundaries.md)
-- [ADR 0004: Deterministic matching-core state architecture](docs/adr/0004-deterministic-matching-core-state-architecture.md)
+The longer-term aim is a technically defensible trading-systems portfolio project. **No production, exchange-grade, high-frequency-trading, latency, throughput or concurrency-readiness claims are made at this stage.**
 
 ## Licence
 
-No licence has been selected. Until a licence file is added, all rights are reserved.
+No licence has been selected; until a licence is added, all rights are reserved.
